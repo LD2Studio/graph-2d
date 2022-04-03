@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://addons/graph_2d/graph_2d.gd" type="Script" id=1]
+[ext_resource path="res://examples/plot_xy.gd" type="Script" id=2]
+
+[node name="PlotXY" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 2 )
+
+[node name="Graph2D" type="Control" parent="."]
+margin_left = 220.0
+margin_top = 94.0
+margin_right = 691.0
+margin_bottom = 464.0
+script = ExtResource( 1 )
+background_color = Color( 0, 0, 0, 1 )
+x_axis_min_value = 0.0
+x_axis_max_value = 10.0
+x_axis_grad_number = 11
+y_axis_min_value = 0.0
+y_axis_max_value = 1.0
+y_axis_grad_number = 7
+grid_horizontal_visible = false
+grid_vertical_visible = false

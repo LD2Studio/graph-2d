@@ -1,0 +1,404 @@
+tool
+extends Control
+
+
+## Minimun value on X-axis
+var x_axis_min_value = 0.0 setget set_x_axis_min_value
+## Maximum value on X-axis
+var x_axis_max_value = 10.0 setget set_x_axis_max_value
+## Number of graduations on the X-axis
+var x_axis_grad_number = 11 setget set_x_axis_grad_number
+
+## Minimun value on Y-axis
+var y_axis_min_value = 0.0 setget set_y_axis_min_value
+## Maximum value on Y-axis
+var y_axis_max_value = 1.0 setget set_y_axis_max_value
+## Number of graduations on the Y-axis
+var y_axis_grad_number = 7 setget set_y_axis_grad_number
+## background color of graph
+var background_color = Color.black setget set_background_color
+## Grid visibility
+var grid_horizontal_visible := false setget set_grid_horizontal_visible
+var grid_vertical_visible := false setget set_grid_vertical_visible
+
+var plots: Array # [id: int, color: Color] 
+var background := ColorRect.new()
+var plot_area := Control.new()
+
+var Plot2D = preload("res://addons/graph_2d/custom_nodes/plot_2d.gd")
+var axis = preload("res://addons/graph_2d/custom_nodes/axis.gd").new()
+var grid = preload("res://addons/graph_2d/custom_nodes/grid.gd").new()
+var legend = preload("res://addons/graph_2d/custom_nodes/legend.gd").new()
+
+
+const MARGIN_TOP = 30
+const MARGIN_BOTTOM = 30
+const MARGIN_LEFT = 45
+const MARGIN_RIGHT = 30
+
+
+func _ready() -> void:
+	setup_graph()
+	
+	
+func setup_graph():
+	background.name = "Background"
+	background.color = background_color
+	background.anchor_right = 1.0
+	background.anchor_bottom = 1.0
+	add_child(background)
+	
+	plot_area.name = "PlotArea"
+	plot_area.anchor_right = 1.0
+	plot_area.anchor_bottom = 1.0
+	plot_area.margin_left = MARGIN_LEFT
+	plot_area.margin_top = MARGIN_TOP
+	plot_area.margin_right = -MARGIN_RIGHT
+	plot_area.margin_bottom = -MARGIN_BOTTOM
+	add_child(plot_area)
+	
+	axis.name = "Axis"
+	add_child(axis)
+	grid.name = "Grid"
+	add_child(grid)
+	legend.name = "Legend"
+	add_child(legend)
+	
+	connect("resized", self, "_on_Graph_resized")
+	plot_area.connect("resized", self, "_on_Plot_area_resized")
+
+
+func update_axis() -> void:
+#	print_debug("update axis")
+	# Vertical Graduation
+	var y_axis_range: float = y_axis_max_value - y_axis_min_value
+	var vert_grad_number = y_axis_grad_number
+	# Horizontal Graduation
+	var x_axis_range: float = x_axis_max_value - x_axis_min_value
+	var hor_grad_number = x_axis_grad_number
+	# Plot area height in pixel
+	var area_height = rect_size.y - MARGIN_TOP - MARGIN_BOTTOM
+	var vert_grad_step_px = area_height / (vert_grad_number - 1)
+	# Plot area width in pixel
+	var area_width = rect_size.x - MARGIN_LEFT - MARGIN_RIGHT
+	var hor_grad_step_px = area_width / (hor_grad_number -1)
+	
+	var vert_grad: Array
+	var hor_grid: Array
+	var grad_px: Vector2
+	grad_px.x = MARGIN_LEFT
+	
+	for n in range(vert_grad_number):
+		var grad: Array = []
+		grad_px.y = MARGIN_TOP + n * vert_grad_step_px
+		grad.append(grad_px)
+		var grad_text = "%0.1f" % (float(y_axis_max_value) - n * float(y_axis_range)/(vert_grad_number-1))
+		grad.append(grad_text)
+		vert_grad.append(grad)
+		
+		# Horizontal grid
+		if grid_horizontal_visible:
+			var grid_px: PoolVector2Array
+			grid_px.append(grad_px)
+			grid_px.append(Vector2(grad_px.x + area_width, grad_px.y))
+			hor_grid.append(grid_px)
+			
+	axis.vert_grad = vert_grad
+	if grid_horizontal_visible:
+		grid.hor_grid = hor_grid
+	else:
+		grid.hor_grid = []
+		
+	var hor_grad: Array
+	var vert_grid: Array
+	grad_px = Vector2()	
+	grad_px.y = MARGIN_TOP + area_height
+	
+	for n in range(hor_grad_number):
+		var grad: Array = []
+		grad_px.x = MARGIN_LEFT + n * hor_grad_step_px
+		grad.append(grad_px)
+		var grad_text = "%0.1f" % (float(x_axis_min_value) + n * float(x_axis_range)/(hor_grad_number-1))
+		grad.append(grad_text)
+		hor_grad.append(grad)
+		
+		# Vertical grid
+		if grid_vertical_visible:
+			var grid_px: PoolVector2Array
+			grid_px.append(grad_px)
+			grid_px.append(Vector2(grad_px.x, grad_px.y - area_height))
+			vert_grid.append(grid_px)
+		
+	axis.hor_grad = hor_grad
+	if grid_vertical_visible:
+		grid.vert_grid = vert_grid
+	else:
+		grid.vert_grid = []
+	
+	axis.update()
+	grid.update()
+	
+	
+func update_legend():
+	var legend_array: Array
+	var legend_pos_px: Vector2
+	legend_pos_px.x = MARGIN_LEFT + 10
+	var plots_number = plots.size()
+	var n = 0
+	for plot in plots:
+		var legend: Array
+		legend.append(plot.label)
+		legend.append(plot.color)
+		legend_pos_px.y = MARGIN_TOP + 20 + n*20
+		legend.append(legend_pos_px)
+		legend_array.append(legend)
+		n += 1
+	legend.legend_array = legend_array
+	legend.update()
+	
+	
+func add_plot(color = Color.red, width = 1.0, label = "untitled") -> int:
+	
+	var id: int = 0
+	var id_unique = false
+	
+	while not id_unique:
+		var id_search = id
+		for plot in plots:
+			if plot.id == id_search: # id exist !
+				id += 1
+				break
+		if id_search == id:
+			id_unique = true
+
+		
+	var plot: Dictionary
+	plot["id"] = id
+	plot["color"] = color
+	plot["width"] = width
+	plot["label"] = label
+	plot["points"] = PoolVector2Array([])
+	plots.append(plot)
+	
+	var plt = Plot2D.new()
+	plt.name = "Plot%d" % id
+	plt.color = color
+	plt.width = width
+	plot_area.add_child(plt)
+	
+	update_legend()
+	return plot.id
+	
+func clear_plot(id: int) -> void:
+	for plot in plots:
+		if plot.id == id:
+			plot.points = PoolVector2Array([])
+			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
+			plot_node.points_px = plot.points
+			plot_node.update()
+			break
+			
+func remove_plot(id) -> int:
+	if not id is int:
+		return FAILED
+		
+	for plot in plots:
+		if plot.id == id:
+			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
+			plot_area.remove_child(plot_node)
+			plot_node.queue_free()
+			plots.erase(plot)
+			update_legend()
+			return OK
+			
+	return FAILED
+	
+
+func update_plots() -> void:
+	
+	for plot in plots:
+		var pts_px: PoolVector2Array
+		var pt_px: Vector2
+		for pt in plot.points:
+#			print(rect_size)
+			pt.x = clamp(pt.x, x_axis_min_value, x_axis_max_value)
+			pt.y = clamp(pt.y, y_axis_min_value, y_axis_max_value)
+			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, plot_area.rect_size.x)
+			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, plot_area.rect_size.y, 0)
+			pts_px.append(pt_px)
+		var plt = get_node("%s/Plot%d" % [plot_area.name, plot.id])
+		
+		plt.points_px = pts_px
+		plt.update()
+		
+
+func add_point(id: int, point: Vector2):
+#	print_debug("add point")
+	for plot in plots:
+		if plot.id == id:
+			var pts: PoolVector2Array = plot.points
+			pts.append(point)
+			plot.points = pts
+			var pt: Vector2
+			pt.x = clamp(point.x, x_axis_min_value, x_axis_max_value)
+			pt.y = clamp(point.y, y_axis_min_value, y_axis_max_value)
+			
+			var pt_px: Vector2
+			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, plot_area.rect_size.x)
+			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, plot_area.rect_size.y, 0)
+			
+			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
+			var pts_px: PoolVector2Array = plot_node.points_px
+			pts_px.append(pt_px)
+			plot_node.points_px = pts_px
+			plot_node.update()
+			break
+			
+
+func add_points(id: int, points: PoolVector2Array):
+	
+	for point in points:
+		add_point(id, point)
+	
+
+func get_points(id: int) -> PoolVector2Array:
+	for plot in plots:
+		if plot.id == id:
+			return plot.points
+			
+	return PoolVector2Array()
+	
+
+func set_x_axis_min_value(value) -> void:
+	x_axis_min_value = value
+	update_axis()
+	
+func set_x_axis_max_value(value) -> void:
+	x_axis_max_value = value
+	update_axis()
+	
+func set_x_axis_grad_number(value) -> void:
+	x_axis_grad_number = value
+	update_axis()
+	
+func set_y_axis_min_value(value) -> void:
+	y_axis_min_value = value
+	update_axis()
+	
+func set_y_axis_max_value(value) -> void:
+	y_axis_max_value = value
+	update_axis()
+	
+func set_y_axis_grad_number(value) -> void:
+	y_axis_grad_number = value
+	update_axis()
+	
+func set_background_color(value):
+	background_color = value
+	if is_instance_valid(background):
+		background.color = background_color
+	
+func set_grid_horizontal_visible(value):
+	grid_horizontal_visible = value
+	update_axis()
+
+func set_grid_vertical_visible(value):
+	grid_vertical_visible = value
+	update_axis()
+	
+func _get_property_list() -> Array:
+	var props = []
+	props.append(
+		{
+			"name": "Graph2D",
+			"type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_CATEGORY
+		}
+	)
+	props.append(
+		{
+			"name": "background_color",
+			"type": TYPE_COLOR
+		}
+	)
+	props.append(
+		{
+			"name": "X Axis",
+			"type": TYPE_NIL,
+			"hint_string": "x_axis_",
+			"usage": PROPERTY_USAGE_GROUP|PROPERTY_USAGE_SCRIPT_VARIABLE
+		}
+	)
+	props.append(
+		{
+			"name": "x_axis_min_value",
+			"type": TYPE_REAL
+		}
+	)
+	props.append(
+		{
+			"name": "x_axis_max_value",
+			"type": TYPE_REAL
+		}
+	)
+	props.append(
+		{
+			"name": "x_axis_grad_number",
+			"type": TYPE_INT
+		}
+	)
+	props.append(
+		{
+			"name": "Y Axis",
+			"type": TYPE_NIL,
+			"hint_string": "y_axis_",
+			"usage": PROPERTY_USAGE_GROUP|PROPERTY_USAGE_SCRIPT_VARIABLE
+		}
+	)
+	props.append(
+		{
+			"name": "y_axis_min_value",
+			"type": TYPE_REAL
+		}
+	)
+	props.append(
+		{
+			"name": "y_axis_max_value",
+			"type": TYPE_REAL
+		}
+	)
+	props.append(
+		{
+			"name": "y_axis_grad_number",
+			"type": TYPE_INT
+		}
+	)
+	props.append(
+		{
+			"name": "Grid",
+			"type": TYPE_NIL,
+			"hint_string": "grid_",
+			"usage": PROPERTY_USAGE_GROUP
+		}
+	)
+	props.append(
+		{
+			"name": "grid_horizontal_visible",
+			"type": TYPE_BOOL
+		}
+	)
+	props.append(
+		{
+			"name": "grid_vertical_visible",
+			"type": TYPE_BOOL
+		}
+	)
+	return props
+
+
+func _on_Graph_resized() -> void:
+	update_axis()
+	update_legend()
+
+func _on_Plot_area_resized() -> void:
+	update_plots()
