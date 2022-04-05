@@ -21,9 +21,9 @@ var background_color = Color.black setget set_background_color
 var grid_horizontal_visible := false setget set_grid_horizontal_visible
 var grid_vertical_visible := false setget set_grid_vertical_visible
 
-var plots: Array # [id: int, color: Color] 
-var background := ColorRect.new()
-var plot_area := Control.new()
+var _curves: Array # [id: int, color: Color, width: int] 
+var _background := ColorRect.new()
+var _plot_area := Control.new()
 
 var Plot2D = preload("res://addons/graph_2d/custom_nodes/plot_2d.gd")
 var axis = preload("res://addons/graph_2d/custom_nodes/axis.gd").new()
@@ -36,26 +36,122 @@ const MARGIN_BOTTOM = 30
 const MARGIN_LEFT = 45
 const MARGIN_RIGHT = 30
 
+## Public Methods
+
+func add_curve(label = "untitled", color = Color.red, width = 1.0) -> int:
+	
+	var id: int = 0
+	var id_unique = false
+	
+	while not id_unique:
+		var id_search = id
+		for curve in _curves:
+			if curve.id == id_search: # id exist !
+				id += 1
+				break
+		if id_search == id:
+			id_unique = true
+
+		
+	var curve: Dictionary
+	curve["id"] = id
+	curve["color"] = color
+	curve["width"] = width
+	curve["label"] = label
+	curve["points"] = PoolVector2Array([])
+	_curves.append(curve)
+	
+	var plt = Plot2D.new()
+	plt.name = "Plot%d" % id
+	plt.color = color
+	plt.width = width
+	_plot_area.add_child(plt)
+	
+	_update_legend()
+	return curve.id
+	
+	
+func clear_curve(id: int) -> void:
+	for curve in _curves:
+		if curve.id == id:
+			curve.points = PoolVector2Array([])
+			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
+			plot_node.points_px = curve.points
+			plot_node.update()
+			break
+
+
+func remove_curve(id) -> int:
+	if not id is int:
+		return FAILED
+		
+	for curve in _curves:
+		if curve.id == id:
+			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
+			_plot_area.remove_child(plot_node)
+			plot_node.queue_free()
+			_curves.erase(curve)
+			_update_legend()
+			return OK
+			
+	return FAILED
+	
+
+func add_point(id: int, point: Vector2):
+	for curve in _curves:
+		if curve.id == id:
+			var pts: PoolVector2Array = curve.points
+			pts.append(point)
+			curve.points = pts
+			var pt: Vector2
+			pt.x = clamp(point.x, x_axis_min_value, x_axis_max_value)
+			pt.y = clamp(point.y, y_axis_min_value, y_axis_max_value)
+			
+			var pt_px: Vector2
+			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, _plot_area.rect_size.x)
+			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, _plot_area.rect_size.y, 0)
+			
+			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
+			var pts_px: PoolVector2Array = plot_node.points_px
+			pts_px.append(pt_px)
+			plot_node.points_px = pts_px
+			plot_node.update()
+			break
+			
+
+func add_points(id: int, points: PoolVector2Array):
+	for point in points:
+		add_point(id, point)
+	
+
+func get_points(id: int) -> PoolVector2Array:
+	for plot in _curves:
+		if plot.id == id:
+			return plot.points
+			
+	return PoolVector2Array()
+
+## Internal Methods
 
 func _ready() -> void:
-	setup_graph()
+	_setup_graph()
 	
 	
-func setup_graph():
-	background.name = "Background"
-	background.color = background_color
-	background.anchor_right = 1.0
-	background.anchor_bottom = 1.0
-	add_child(background)
+func _setup_graph():
+	_background.name = "Background"
+	_background.color = background_color
+	_background.anchor_right = 1.0
+	_background.anchor_bottom = 1.0
+	add_child(_background)
 	
-	plot_area.name = "PlotArea"
-	plot_area.anchor_right = 1.0
-	plot_area.anchor_bottom = 1.0
-	plot_area.margin_left = MARGIN_LEFT
-	plot_area.margin_top = MARGIN_TOP
-	plot_area.margin_right = -MARGIN_RIGHT
-	plot_area.margin_bottom = -MARGIN_BOTTOM
-	add_child(plot_area)
+	_plot_area.name = "PlotArea"
+	_plot_area.anchor_right = 1.0
+	_plot_area.anchor_bottom = 1.0
+	_plot_area.margin_left = MARGIN_LEFT
+	_plot_area.margin_top = MARGIN_TOP
+	_plot_area.margin_right = -MARGIN_RIGHT
+	_plot_area.margin_bottom = -MARGIN_BOTTOM
+	add_child(_plot_area)
 	
 	axis.name = "Axis"
 	add_child(axis)
@@ -65,10 +161,15 @@ func setup_graph():
 	add_child(legend)
 	
 	connect("resized", self, "_on_Graph_resized")
-	plot_area.connect("resized", self, "_on_Plot_area_resized")
+	_plot_area.connect("resized", self, "_on_Plot_area_resized")
 
+	move_child(legend, 0)
+	move_child(grid, 0)
+	move_child(axis, 0)
+	move_child(_plot_area, 0)
+	move_child(_background, 0)
 
-func update_axis() -> void:
+func _update_axis() -> void:
 #	print_debug("update axis")
 	# Vertical Graduation
 	var y_axis_range: float = y_axis_max_value - y_axis_min_value
@@ -139,16 +240,16 @@ func update_axis() -> void:
 	grid.update()
 	
 	
-func update_legend():
+func _update_legend():
 	var legend_array: Array
 	var legend_pos_px: Vector2
 	legend_pos_px.x = MARGIN_LEFT + 10
-	var plots_number = plots.size()
+	var plots_number = _curves.size()
 	var n = 0
-	for plot in plots:
+	for curve in _curves:
 		var legend: Array
-		legend.append(plot.label)
-		legend.append(plot.color)
+		legend.append(curve.label)
+		legend.append(curve.color)
 		legend_pos_px.y = MARGIN_TOP + 20 + n*20
 		legend.append(legend_pos_px)
 		legend_array.append(legend)
@@ -157,154 +258,60 @@ func update_legend():
 	legend.update()
 	
 	
-func add_plot(color = Color.red, width = 1.0, label = "untitled") -> int:
+func _update_plot() -> void:
 	
-	var id: int = 0
-	var id_unique = false
-	
-	while not id_unique:
-		var id_search = id
-		for plot in plots:
-			if plot.id == id_search: # id exist !
-				id += 1
-				break
-		if id_search == id:
-			id_unique = true
-
-		
-	var plot: Dictionary
-	plot["id"] = id
-	plot["color"] = color
-	plot["width"] = width
-	plot["label"] = label
-	plot["points"] = PoolVector2Array([])
-	plots.append(plot)
-	
-	var plt = Plot2D.new()
-	plt.name = "Plot%d" % id
-	plt.color = color
-	plt.width = width
-	plot_area.add_child(plt)
-	
-	update_legend()
-	return plot.id
-	
-func clear_plot(id: int) -> void:
-	for plot in plots:
-		if plot.id == id:
-			plot.points = PoolVector2Array([])
-			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
-			plot_node.points_px = plot.points
-			plot_node.update()
-			break
-			
-func remove_plot(id) -> int:
-	if not id is int:
-		return FAILED
-		
-	for plot in plots:
-		if plot.id == id:
-			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
-			plot_area.remove_child(plot_node)
-			plot_node.queue_free()
-			plots.erase(plot)
-			update_legend()
-			return OK
-			
-	return FAILED
-	
-
-func update_plots() -> void:
-	
-	for plot in plots:
+	for curve in _curves:
 		var pts_px: PoolVector2Array
 		var pt_px: Vector2
-		for pt in plot.points:
+		for pt in curve.points:
 #			print(rect_size)
 			pt.x = clamp(pt.x, x_axis_min_value, x_axis_max_value)
 			pt.y = clamp(pt.y, y_axis_min_value, y_axis_max_value)
-			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, plot_area.rect_size.x)
-			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, plot_area.rect_size.y, 0)
+			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, _plot_area.rect_size.x)
+			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, _plot_area.rect_size.y, 0)
 			pts_px.append(pt_px)
-		var plt = get_node("%s/Plot%d" % [plot_area.name, plot.id])
+		var plt = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
 		
 		plt.points_px = pts_px
 		plt.update()
 		
 
-func add_point(id: int, point: Vector2):
-#	print_debug("add point")
-	for plot in plots:
-		if plot.id == id:
-			var pts: PoolVector2Array = plot.points
-			pts.append(point)
-			plot.points = pts
-			var pt: Vector2
-			pt.x = clamp(point.x, x_axis_min_value, x_axis_max_value)
-			pt.y = clamp(point.y, y_axis_min_value, y_axis_max_value)
-			
-			var pt_px: Vector2
-			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, plot_area.rect_size.x)
-			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, plot_area.rect_size.y, 0)
-			
-			var plot_node = get_node("%s/Plot%d" % [plot_area.name, plot.id])
-			var pts_px: PoolVector2Array = plot_node.points_px
-			pts_px.append(pt_px)
-			plot_node.points_px = pts_px
-			plot_node.update()
-			break
-			
-
-func add_points(id: int, points: PoolVector2Array):
-	
-	for point in points:
-		add_point(id, point)
-	
-
-func get_points(id: int) -> PoolVector2Array:
-	for plot in plots:
-		if plot.id == id:
-			return plot.points
-			
-	return PoolVector2Array()
-	
-
 func set_x_axis_min_value(value) -> void:
 	x_axis_min_value = value
-	update_axis()
+	_update_axis()
 	
 func set_x_axis_max_value(value) -> void:
 	x_axis_max_value = value
-	update_axis()
+	_update_axis()
 	
 func set_x_axis_grad_number(value) -> void:
 	x_axis_grad_number = value
-	update_axis()
+	_update_axis()
 	
 func set_y_axis_min_value(value) -> void:
 	y_axis_min_value = value
-	update_axis()
+	_update_axis()
 	
 func set_y_axis_max_value(value) -> void:
 	y_axis_max_value = value
-	update_axis()
+	_update_axis()
 	
 func set_y_axis_grad_number(value) -> void:
 	y_axis_grad_number = value
-	update_axis()
+	_update_axis()
 	
 func set_background_color(value):
 	background_color = value
-	if is_instance_valid(background):
-		background.color = background_color
+	if is_instance_valid(_background):
+		_background.color = background_color
 	
 func set_grid_horizontal_visible(value):
 	grid_horizontal_visible = value
-	update_axis()
+	_update_axis()
 
 func set_grid_vertical_visible(value):
 	grid_vertical_visible = value
-	update_axis()
+	_update_axis()
 	
 func _get_property_list() -> Array:
 	var props = []
@@ -397,8 +404,8 @@ func _get_property_list() -> Array:
 
 
 func _on_Graph_resized() -> void:
-	update_axis()
-	update_legend()
+	_update_axis()
+	_update_legend()
 
 func _on_Plot_area_resized() -> void:
-	update_plots()
+	_update_plot()

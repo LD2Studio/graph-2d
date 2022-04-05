@@ -9,10 +9,10 @@ anchor_bottom = 1.0
 script = ExtResource( 2 )
 
 [node name="Graph2D" type="Control" parent="."]
-margin_left = 220.0
+margin_left = 226.0
 margin_top = 94.0
-margin_right = 691.0
-margin_bottom = 464.0
+margin_right = 757.0
+margin_bottom = 474.0
 script = ExtResource( 1 )
 background_color = Color( 0, 0, 0, 1 )
 x_axis_min_value = 0.0

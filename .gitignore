@@ -1,2 +1,6 @@
 import/
 *.import
+export.cfg
+export_presets.cfg
+*.zip
+.vscode/

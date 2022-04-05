@@ -1,0 +1,46 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://addons/graph_2d/graph_2d.gd" type="Script" id=1]
+[ext_resource path="res://examples/plot_sin_t.gd" type="Script" id=2]
+
+[node name="PlotSint" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 2 )
+
+[node name="Graph2D" type="Control" parent="."]
+margin_left = 156.0
+margin_top = 67.0
+margin_right = 861.0
+margin_bottom = 507.0
+script = ExtResource( 1 )
+background_color = Color( 0, 0, 0, 1 )
+x_axis_min_value = 0.0
+x_axis_max_value = 30.0
+x_axis_grad_number = 11
+y_axis_min_value = -1.0
+y_axis_max_value = 1.0
+y_axis_grad_number = 7
+grid_horizontal_visible = false
+grid_vertical_visible = false
+
+[node name="StartButton" type="Button" parent="Graph2D"]
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -104.0
+margin_top = 19.0
+margin_right = -22.0
+margin_bottom = 39.0
+text = "Draw Sin(x)"
+
+[node name="EraseButton" type="Button" parent="Graph2D"]
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -89.0
+margin_top = 46.0
+margin_right = -43.0
+margin_bottom = 66.0
+text = "Erase"
+
+[connection signal="pressed" from="Graph2D/StartButton" to="." method="_on_StartButton_pressed"]
+[connection signal="pressed" from="Graph2D/EraseButton" to="." method="_on_EraseButton_pressed"]
