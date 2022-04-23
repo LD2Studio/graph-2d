@@ -11,4 +11,4 @@
 default_env.tres export-ignore
 project.godot export-ignore
 *.import export-ignore
-/screenshots
+/screenshots export-ignore
