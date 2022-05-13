@@ -76,7 +76,7 @@ func clear_curve(id: int) -> void:
 		if curve.id == id:
 			curve.points = PoolVector2Array([])
 			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
-			plot_node.points_px = curve.points
+			plot_node.points_px = PoolVector2Array([])
 			plot_node.update()
 			break
 
