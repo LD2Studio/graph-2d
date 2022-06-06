@@ -8,6 +8,8 @@ var x_axis_min_value = 0.0 setget set_x_axis_min_value
 var x_axis_max_value = 10.0 setget set_x_axis_max_value
 ## Number of graduations on the X-axis
 var x_axis_grad_number = 11 setget set_x_axis_grad_number
+## Label on the X-axis
+var x_axis_label: String = "" setget set_x_axis_label
 
 ## Minimun value on Y-axis
 var y_axis_min_value = 0.0 setget set_y_axis_min_value
@@ -15,6 +17,9 @@ var y_axis_min_value = 0.0 setget set_y_axis_min_value
 var y_axis_max_value = 1.0 setget set_y_axis_max_value
 ## Number of graduations on the Y-axis
 var y_axis_grad_number = 7 setget set_y_axis_grad_number
+## Label on the Y-axis
+var y_axis_label: String = "" setget set_y_axis_label
+
 ## background color of graph
 var background_color = Color.black setget set_background_color
 ## Grid visibility
@@ -35,6 +40,14 @@ const MARGIN_TOP = 30
 const MARGIN_BOTTOM = 30
 const MARGIN_LEFT = 45
 const MARGIN_RIGHT = 30
+
+# Plot margins
+var _margin = {
+	"top": 0,
+	"bottom": 0,
+	"left": 0,
+	"right": 0
+}
 
 ## Public Methods
 
@@ -169,31 +182,34 @@ func _setup_graph():
 	move_child(_plot_area, 0)
 	move_child(_background, 0)
 
+func _update_margins() -> void:
+	_margin.left = MARGIN_LEFT if y_axis_label == "" else MARGIN_LEFT + 20
+	_margin.bottom = MARGIN_BOTTOM if x_axis_label == "" else MARGIN_BOTTOM + 20
+
 func _update_axis() -> void:
-#	print_debug("update axis")
+
 	# Vertical Graduation
 	var y_axis_range: float = y_axis_max_value - y_axis_min_value
-	var vert_grad_number = y_axis_grad_number
 	# Horizontal Graduation
 	var x_axis_range: float = x_axis_max_value - x_axis_min_value
-	var hor_grad_number = x_axis_grad_number
 	# Plot area height in pixel
-	var area_height = rect_size.y - MARGIN_TOP - MARGIN_BOTTOM
-	var vert_grad_step_px = area_height / (vert_grad_number - 1)
+	var area_height = rect_size.y - MARGIN_TOP - _margin.bottom
+	var vert_grad_step_px = area_height / (y_axis_grad_number - 1)
 	# Plot area width in pixel
-	var area_width = rect_size.x - MARGIN_LEFT - MARGIN_RIGHT
-	var hor_grad_step_px = area_width / (hor_grad_number -1)
+	var area_width = rect_size.x - _margin.left - MARGIN_RIGHT
+	var hor_grad_step_px = area_width / (x_axis_grad_number -1)
 	
 	var vert_grad: Array
 	var hor_grid: Array
 	var grad_px: Vector2
-	grad_px.x = MARGIN_LEFT
 	
-	for n in range(vert_grad_number):
+	grad_px.x = _margin.left
+	
+	for n in range(y_axis_grad_number):
 		var grad: Array = []
 		grad_px.y = MARGIN_TOP + n * vert_grad_step_px
 		grad.append(grad_px)
-		var grad_text = "%0.1f" % (float(y_axis_max_value) - n * float(y_axis_range)/(vert_grad_number-1))
+		var grad_text = "%0.1f" % (float(y_axis_max_value) - n * float(y_axis_range)/(y_axis_grad_number-1))
 		grad.append(grad_text)
 		vert_grad.append(grad)
 		
@@ -215,11 +231,11 @@ func _update_axis() -> void:
 	grad_px = Vector2()	
 	grad_px.y = MARGIN_TOP + area_height
 	
-	for n in range(hor_grad_number):
+	for n in range(x_axis_grad_number):
 		var grad: Array = []
-		grad_px.x = MARGIN_LEFT + n * hor_grad_step_px
+		grad_px.x = _margin.left + n * hor_grad_step_px
 		grad.append(grad_px)
-		var grad_text = "%0.1f" % (float(x_axis_min_value) + n * float(x_axis_range)/(hor_grad_number-1))
+		var grad_text = "%0.1f" % (float(x_axis_min_value) + n * float(x_axis_range)/(x_axis_grad_number-1))
 		grad.append(grad_text)
 		hor_grad.append(grad)
 		
@@ -243,7 +259,7 @@ func _update_axis() -> void:
 func _update_legend():
 	var legend_array: Array
 	var legend_pos_px: Vector2
-	legend_pos_px.x = MARGIN_LEFT + 10
+	legend_pos_px.x = _margin.left + 10
 	var plots_number = _curves.size()
 	var n = 0
 	for curve in _curves:
@@ -259,6 +275,11 @@ func _update_legend():
 	
 	
 func _update_plot() -> void:
+	
+	_plot_area.margin_left = _margin.left
+	_plot_area.margin_top = MARGIN_TOP
+	_plot_area.margin_right = -MARGIN_RIGHT
+	_plot_area.margin_bottom = -_margin.bottom
 	
 	for curve in _curves:
 		var pts_px: PoolVector2Array
@@ -285,8 +306,17 @@ func set_x_axis_max_value(value) -> void:
 	_update_axis()
 	
 func set_x_axis_grad_number(value) -> void:
-	x_axis_grad_number = value
+	if value > 1:
+		x_axis_grad_number = value
+		_update_axis()
+	
+func set_x_axis_label(value) -> void:
+	x_axis_label = value
+	axis.x_label = x_axis_label
+	_update_margins()
 	_update_axis()
+	_update_legend()
+	_update_plot()
 	
 func set_y_axis_min_value(value) -> void:
 	y_axis_min_value = value
@@ -297,8 +327,17 @@ func set_y_axis_max_value(value) -> void:
 	_update_axis()
 	
 func set_y_axis_grad_number(value) -> void:
-	y_axis_grad_number = value
+	if value > 1:
+		y_axis_grad_number = value
+		_update_axis()
+	
+func set_y_axis_label(value) -> void:
+	y_axis_label = value
+	axis.y_label = y_axis_label
+	_update_margins()
 	_update_axis()
+	_update_legend()
+	_update_plot()
 	
 func set_background_color(value):
 	background_color = value
@@ -356,6 +395,12 @@ func _get_property_list() -> Array:
 	)
 	props.append(
 		{
+			"name": "x_axis_label",
+			"type": TYPE_STRING
+		}
+	)
+	props.append(
+		{
 			"name": "Y Axis",
 			"type": TYPE_NIL,
 			"hint_string": "y_axis_",
@@ -378,6 +423,12 @@ func _get_property_list() -> Array:
 		{
 			"name": "y_axis_grad_number",
 			"type": TYPE_INT
+		}
+	)
+	props.append(
+		{
+			"name": "y_axis_label",
+			"type": TYPE_STRING
 		}
 	)
 	props.append(
