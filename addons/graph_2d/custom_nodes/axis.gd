@@ -28,7 +28,7 @@ func _draw() -> void:
 	# draw vertical line
 	draw_line(topleft, vert_grad.back()[0], Color.white)
 	_y_label.text = y_label
-	_y_label.rect_position = Vector2(5, (bottomright.y - topleft.y)/2)
+	_y_label.rect_position = Vector2(5, (bottomright.y + topleft.y)/2)
 		
 	for grad in hor_grad:
 		draw_line(grad[0], grad[0] + Vector2(0, 10), Color.white)
@@ -37,4 +37,4 @@ func _draw() -> void:
 	# draw horizontal line
 	draw_line(hor_grad.front()[0], hor_grad.back()[0], Color.white)
 	_x_label.text = x_label
-	_x_label.rect_position = Vector2((bottomright.x - topleft.x)/2, bottomright.y + 20)
+	_x_label.rect_position = Vector2((bottomright.x + topleft.x)/2, bottomright.y + 20)
