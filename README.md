@@ -10,7 +10,7 @@ This repository contains the add-on and examples.
 
 - Plot several curves on the same graph.
 - Supports curve thickness and color.
-- Customizable chart axes and grid.
+- Customizable chart axes (axis label and grid).
 - Real-time plotting.
 - Works with both the GLES3 and GLES2 renderers.
 - Works on desktop platforms and HTML5 (others target were not tested).

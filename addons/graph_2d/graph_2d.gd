@@ -148,6 +148,7 @@ func get_points(id: int) -> PoolVector2Array:
 
 func _ready() -> void:
 	_setup_graph()
+	_update_plot()
 	
 	
 func _setup_graph():
