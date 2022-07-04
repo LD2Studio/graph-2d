@@ -29,6 +29,7 @@ var grid_vertical_visible := false setget set_grid_vertical_visible
 var _curves: Array # [id: int, color: Color, width: int] 
 var _background := ColorRect.new()
 var _plot_area := Control.new()
+var _max_points: int
 
 var Plot2D = preload("res://addons/graph_2d/custom_nodes/plot_2d.gd")
 var axis = preload("res://addons/graph_2d/custom_nodes/axis.gd").new()
@@ -110,9 +111,14 @@ func remove_curve(id) -> int:
 	return FAILED
 	
 
-func add_point(id: int, point: Vector2):
+func add_point(id: int, point: Vector2) -> int:
 	for curve in _curves:
 		if curve.id == id:
+			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
+			var pts_px: PoolVector2Array = plot_node.points_px
+			if pts_px.size() >= _max_points:
+				return ERR_OUT_OF_MEMORY
+				
 			var pts: PoolVector2Array = curve.points
 			pts.append(point)
 			curve.points = pts
@@ -124,13 +130,11 @@ func add_point(id: int, point: Vector2):
 			pt_px.x = range_lerp(pt.x, x_axis_min_value, x_axis_max_value, 0, _plot_area.rect_size.x)
 			pt_px.y = range_lerp(pt.y, y_axis_min_value, y_axis_max_value, _plot_area.rect_size.y, 0)
 			
-			var plot_node = get_node("%s/Plot%d" % [_plot_area.name, curve.id])
-			var pts_px: PoolVector2Array = plot_node.points_px
 			pts_px.append(pt_px)
 			plot_node.points_px = pts_px
 			plot_node.update()
 			break
-			
+	return OK
 
 func add_points(id: int, points: PoolVector2Array):
 	for point in points:
@@ -149,7 +153,8 @@ func get_points(id: int) -> PoolVector2Array:
 func _ready() -> void:
 	_setup_graph()
 	_update_plot()
-	
+	var polygon_buffer = ProjectSettings.get_setting("rendering/limits/buffers/canvas_polygon_buffer_size_kb")
+	_max_points = polygon_buffer * 1024 /16
 	
 func _setup_graph():
 	_background.name = "Background"
