@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://addons/graph_2d/graph_2d.gd" type="Script" id=1]
+[ext_resource path="res://examples/graduation.gd" type="Script" id=2]
+
+[node name="graduation" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 2 )
+
+[node name="Graph2D" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+background_color = Color( 0, 0, 0, 1 )
+x_axis_min_value = 0.0
+x_axis_max_value = 0.9
+x_axis_grad_number = 11
+x_axis_label = ""
+y_axis_min_value = 0.0
+y_axis_max_value = 1.0
+y_axis_grad_number = 13
+y_axis_label = ""
+grid_horizontal_visible = true
+grid_vertical_visible = true

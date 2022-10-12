@@ -215,7 +215,10 @@ func _update_axis() -> void:
 		var grad: Array = []
 		grad_px.y = MARGIN_TOP + n * vert_grad_step_px
 		grad.append(grad_px)
-		var grad_text = "%0.1f" % (float(y_axis_max_value) - n * float(y_axis_range)/(y_axis_grad_number-1))
+		var grad_text = "%0.*f" %  [
+			2 if y_axis_range/(y_axis_grad_number-1) < 0.1 else 1,
+			(float(y_axis_max_value) - n * float(y_axis_range)/(y_axis_grad_number-1))
+			]
 		grad.append(grad_text)
 		vert_grad.append(grad)
 		
@@ -241,7 +244,11 @@ func _update_axis() -> void:
 		var grad: Array = []
 		grad_px.x = _margin.left + n * hor_grad_step_px
 		grad.append(grad_px)
-		var grad_text = "%0.1f" % (float(x_axis_min_value) + n * float(x_axis_range)/(x_axis_grad_number-1))
+		# https://docs.godotengine.org/en/3.5/tutorials/scripting/gdscript/gdscript_format_string.html#dynamic-padding
+		var grad_text = "%0.*f" % [
+			2 if x_axis_range/(x_axis_grad_number-1) < 0.1 else 1,
+			(float(x_axis_min_value) + n * float(x_axis_range)/(x_axis_grad_number-1))
+			]
 		grad.append(grad_text)
 		hor_grad.append(grad)
 		
