@@ -1,5 +1,7 @@
 # Graph2D add-on for Godot 3.x
 
+**This plugin is no longer maintained for version 3 of Godot. [Link](https://github.com/LD2Studio/godot4-graph2d) to the plugin for Godot version 4**
+
 ![Screenshot](https://raw.githubusercontent.com/LD2Studio/graph-2d/master/screenshots/screenshot_01.png)
 
 **Graph 2D is an addon able to display curves in your user interface in a very simple way**.
