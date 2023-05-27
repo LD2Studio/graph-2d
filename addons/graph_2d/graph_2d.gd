@@ -27,11 +27,13 @@ var grid_horizontal_visible := false setget set_grid_horizontal_visible
 var grid_vertical_visible := false setget set_grid_vertical_visible
 
 var _curves: Array # [id: int, color: Color, width: int] 
+var _value_pair_series: Array # [id: int, x_values: Array, y_values: Array, color: Color, radius: float]
 var _background := ColorRect.new()
 var _plot_area := Control.new()
 var _max_points: int
 
 var Plot2D = preload("res://addons/graph_2d/custom_nodes/plot_2d.gd")
+var value_pairs = preload("res://addons/graph_2d/custom_nodes/value_pairs.gd")
 var axis = preload("res://addons/graph_2d/custom_nodes/axis.gd").new()
 var grid = preload("res://addons/graph_2d/custom_nodes/grid.gd").new()
 var legend = preload("res://addons/graph_2d/custom_nodes/legend.gd").new()
@@ -139,7 +141,6 @@ func add_point(id: int, point: Vector2) -> int:
 func add_points(id: int, points: PoolVector2Array):
 	for point in points:
 		add_point(id, point)
-	
 
 func get_points(id: int) -> PoolVector2Array:
 	for plot in _curves:
@@ -148,11 +149,70 @@ func get_points(id: int) -> PoolVector2Array:
 			
 	return PoolVector2Array()
 
+func add_value_pairs_series( x_values: Array, y_values: Array, color: Color, radius: float) -> int:
+	
+	var id: int = 0
+	var id_unique = false
+	
+	while not id_unique:
+		var id_search = id
+		for series in _value_pair_series:
+			if series.id == id_search: # id exist !
+				id += 1
+				break
+		if id_search == id:
+			id_unique = true
+	
+	var series: Dictionary
+	series["id"] = id
+	series["x_values"] = x_values
+	series["y_values"] = y_values
+	series["color"] = color
+	series["radius"] = radius
+	_value_pair_series.append(series)
+
+	var vps = value_pairs.new()
+	vps.name = "ValuePairs%d" % id
+	vps.color = color
+	vps.radius = radius
+	_plot_area.add_child(vps)
+	
+	_update_value_pair_series()
+
+	return id
+
+func remove_value_pair_series(id: int) -> int:
+	if not id is int:
+		return FAILED
+		
+	for series in _value_pair_series:
+		if series.id == id:
+			var vps_node = get_node("%s/ValuePairs%d" % [_plot_area.name, series.id])
+			_plot_area.remove_child(vps_node)
+			vps_node.queue_free()
+			_value_pair_series.erase(series)
+			return OK
+			
+	return FAILED
+
+func clear_value_pair_series(id: int) -> int:
+	if not id is int:
+		return FAILED
+		
+	for series in _value_pair_series:
+		if series.id == id:
+			var vps_node = get_node("%s/ValuePairs%d" % [_plot_area.name, series.id])
+			vps_node.value_pair_positions = []
+			return OK
+	
+	return FAILED
+
 ## Internal Methods
 
 func _ready() -> void:
 	_setup_graph()
 	_update_plot()
+	_update_value_pair_series()
 	var polygon_buffer = ProjectSettings.get_setting("rendering/limits/buffers/canvas_polygon_buffer_size_kb")
 	_max_points = polygon_buffer * 1024 /16
 	
@@ -268,7 +328,6 @@ func _update_axis() -> void:
 	axis.update()
 	grid.update()
 	
-	
 func _update_legend():
 	var legend_array: Array
 	var legend_pos_px: Vector2
@@ -285,7 +344,6 @@ func _update_legend():
 		n += 1
 	legend.legend_array = legend_array
 	legend.update()
-	
 	
 func _update_plot() -> void:
 	
@@ -309,6 +367,28 @@ func _update_plot() -> void:
 		plt.points_px = pts_px
 		plt.update()
 		
+func _update_value_pair_series() -> void:
+	_plot_area.margin_left = _margin.left
+	_plot_area.margin_top = MARGIN_TOP
+	_plot_area.margin_right = -MARGIN_RIGHT
+	_plot_area.margin_bottom = -_margin.bottom
+	
+	for series in _value_pair_series:
+		var pts_px: PoolVector2Array
+		var pt_px: Vector2
+		for pt_index in series.x_values.size():
+			var x = series.x_values[pt_index]
+			var y = series.y_values[pt_index]
+#			print(rect_size)
+			x = clamp(x, x_axis_min_value, x_axis_max_value)
+			y = clamp(y, y_axis_min_value, y_axis_max_value)
+			pt_px.x = range_lerp(x, x_axis_min_value, x_axis_max_value, 0, _plot_area.rect_size.x)
+			pt_px.y = range_lerp(y, y_axis_min_value, y_axis_max_value, _plot_area.rect_size.y, 0)
+			pts_px.append(pt_px)
+		var vps = get_node("%s/ValuePairs%d" % [_plot_area.name, series.id])
+		
+		vps.value_pair_positions = pts_px
+		vps.update()
 
 func set_x_axis_min_value(value) -> void:
 	x_axis_min_value = value
@@ -473,3 +553,4 @@ func _on_Graph_resized() -> void:
 
 func _on_Plot_area_resized() -> void:
 	_update_plot()
+	_update_value_pair_series()
