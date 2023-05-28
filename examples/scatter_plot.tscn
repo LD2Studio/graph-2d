@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=2]
 
 [ext_resource path="res://addons/graph_2d/graph_2d.gd" type="Script" id=1]
-[ext_resource path="res://examples/value_pairs.gd" type="Script" id=2]
+[ext_resource path="res://examples/scatter_plot.gd" type="Script" id=2]
 
 [node name="ValuePairs" type="Control"]
 anchor_right = 1.0
@@ -11,8 +11,8 @@ margin_bottom = 4.0
 script = ExtResource( 2 )
 
 [node name="Graph2D" type="Control" parent="."]
-margin_right = 403.0
-margin_bottom = 241.0
+margin_right = 665.0
+margin_bottom = 396.0
 script = ExtResource( 1 )
 background_color = Color( 0, 0, 0, 1 )
 x_axis_min_value = 0.0
