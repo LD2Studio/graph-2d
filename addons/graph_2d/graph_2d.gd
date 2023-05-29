@@ -52,7 +52,7 @@ var _margin = {
 
 ## Public Methods
 
-func add_curve(label = "untitled", color = Color.red, width = 1.0) -> int:
+func add_curve(label = "untitled", color = Color.red, width = 1.0, scatter = false) -> int:
 	
 	var id: int = 0
 	var id_unique = false
@@ -66,24 +66,24 @@ func add_curve(label = "untitled", color = Color.red, width = 1.0) -> int:
 		if id_search == id:
 			id_unique = true
 
-		
 	var curve: Dictionary
 	curve["id"] = id
 	curve["color"] = color
 	curve["width"] = width
 	curve["label"] = label
 	curve["points"] = PoolVector2Array([])
+	curve["scatter"] = scatter
 	_curves.append(curve)
 	
 	var plt = Plot2D.new()
 	plt.name = "Plot%d" % id
 	plt.color = color
 	plt.width = width
+	plt.scatter = scatter
 	_plot_area.add_child(plt)
 	
 	_update_legend()
 	return curve.id
-	
 	
 func clear_curve(id: int) -> void:
 	for curve in _curves:
@@ -93,7 +93,6 @@ func clear_curve(id: int) -> void:
 			plot_node.points_px = PoolVector2Array([])
 			plot_node.update()
 			break
-
 
 func remove_curve(id) -> int:
 	if not id is int:
@@ -110,7 +109,6 @@ func remove_curve(id) -> int:
 			
 	return FAILED
 	
-
 func add_point(id: int, point: Vector2) -> int:
 	for curve in _curves:
 		if curve.id == id:
@@ -139,7 +137,6 @@ func add_point(id: int, point: Vector2) -> int:
 func add_points(id: int, points: PoolVector2Array):
 	for point in points:
 		add_point(id, point)
-	
 
 func get_points(id: int) -> PoolVector2Array:
 	for plot in _curves:
@@ -268,7 +265,6 @@ func _update_axis() -> void:
 	axis.update()
 	grid.update()
 	
-	
 func _update_legend():
 	var legend_array: Array
 	var legend_pos_px: Vector2
@@ -285,7 +281,6 @@ func _update_legend():
 		n += 1
 	legend.legend_array = legend_array
 	legend.update()
-	
 	
 func _update_plot() -> void:
 	
@@ -308,8 +303,7 @@ func _update_plot() -> void:
 		
 		plt.points_px = pts_px
 		plt.update()
-		
-
+	
 func set_x_axis_min_value(value) -> void:
 	x_axis_min_value = value
 	_update_axis()
